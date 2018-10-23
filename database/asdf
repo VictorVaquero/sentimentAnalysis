@@ -1,0 +1,2 @@
+ 
+python2.7 Exporter.py --querysearch "#nvidia" --maxtweets 100000 --output "../database/tweets_nvidia.csv"  && python2.7 Exporter.py --querysearch "#ibm" --maxtweets 100000 --output "../database/tweets_ibm.csv"  && python2.7 Exporter.py --querysearch "#microsoft" --maxtweets 100000 --output "../database/tweets_microsoft.csv"  && python2.7 Exporter.py --querysearch "#google" --maxtweets 100000 --output "../database/tweets_google.csv"  &&  python2.7 Exporter.py --querysearch "#apple" --since 2018-9-27 --maxtweets 50000 --output "../database/tweets_apple2.csv" 
