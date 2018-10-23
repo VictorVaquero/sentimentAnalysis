@@ -57,25 +57,30 @@ x_vec, l_vec = extract_tuples(tokens)
 
 
 # Vectores de entradas y etiquetas
-inp = tf.placeholder(tf.int32, shape = (None))
-label = tf.placeholder(tf.int32, shape = (None))
-# Pasar a representacion dispersa
-inp_one_hot = tf.one_hot(inp, depth = V)
-label_one_hot = tf.one_hot(label, depth = V)
+# y pasar a representacion dispersa
+with tf.name_scope("Entry"):
+    inp = tf.placeholder(tf.int32, shape = (None), name = "Input")
+    inp_one_hot = tf.one_hot(inp, depth = V, name = "One_hot_input")
+with tf.name_scope("Labels"):
+    label = tf.placeholder(tf.int32, shape = (None), name = "Words")
+    label_one_hot = tf.one_hot(label, depth = V, name = "One_hot_words")
 
 # Crear las capas de nuestra arquitectura
-w1 = tf.get_variable("word_embeddings", shape = [V,D], dtype = tf.float32, initializer = tf.random_normal_initializer())
-b1 = tf.get_variable("biases_1", shape = [D], dtype = tf.float32, initializer = tf.zeros_initializer())
-proyection = tf.matmul(inp_one_hot,w1) + b1 # Proyecion lineal 
+with tf.name_scope("Proyection_layer"):
+    w1 = tf.get_variable("word_embeddings", shape = [V,D], dtype = tf.float32, initializer = tf.random_normal_initializer())
+    b1 = tf.get_variable("biases_1", shape = [D], dtype = tf.float32, initializer = tf.zeros_initializer())
+    proyection = tf.matmul(inp_one_hot,w1) + b1 # Proyecion lineal 
+with tf.name_scope("Output_layer"):
+    w2 = tf.get_variable("weitghts_2", shape = [D,V], dtype = tf.float32, initializer = tf.random_normal_initializer())
+    b2 = tf.get_variable("biases_2", shape = [V], dtype = tf.float32,  initializer = tf.zeros_initializer())
+    output = tf.nn.softmax( tf.matmul(proyection,w2) + b2) # Pasar a probabilidades
 
-w2 = tf.get_variable("weitghts_2", shape = [D,V], dtype = tf.float32, initializer = tf.random_normal_initializer())
-b2 = tf.get_variable("biases_2", shape = [V], dtype = tf.float32,  initializer = tf.zeros_initializer())
-output = tf.nn.softmax( tf.matmul(proyection,w2) + b2) # Pasar a probabilidades
-
-loss = tf.reduce_sum(tf.losses.log_loss(label_one_hot, output))
+with tf.name_scope("Loss"):
+    loss = tf.reduce_sum(tf.losses.log_loss(label_one_hot, output))
 tf.summary.scalar("loss", loss)
-optimizer = tf.train.GradientDescentOptimizer(0.02)
-train = optimizer.minimize(loss)
+with tf.name_scope("Train"):
+    optimizer = tf.train.GradientDescentOptimizer(0.02)
+    train = optimizer.minimize(loss)
 
 # Inicializa los valores de las capas
 init = tf.global_variables_initializer()
@@ -84,7 +89,8 @@ sess = tf.Session()
 sess.run(init) # Inicializa sesion
 
 # Informacion extra para analisis a posteriori del grafo
-wr = tf.summary.FileWriter('./eventos',sess.graph)
+wr = tf.summary.FileWriter('./eventos')
+wr.add_graph(sess.graph)
 merged = tf.summary.merge_all()
 
 # Entrenamiento del grafo
@@ -95,7 +101,7 @@ for i in range(EPOCH):
     l = l_vec[i*ratio:(i+1)*ratio]
 
     feed_dict = {inp : x , label: l}
-    summary, loss_value = sess.run([merged,(train, loss)], feed_dict = feed_dict)
+    summary,_, loss_value = sess.run([merged,train,loss], feed_dict = feed_dict)
     wr.add_summary(summary,i)
     print(loss_value)
 
