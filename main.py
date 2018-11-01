@@ -1,10 +1,14 @@
 from collections import Counter
+import csv
 
 import numpy as np
 import tensorflow as tf
 
 # Archivo de texto con los datos a procesar
 TEXT = "pruebas.txt"
+DIR = "./database/"
+FILE = "tweets_apple.csv"
+SHAPE = 10 # Diez columnas, n filas
 # Tamaño de vocabulario
 V = 100
 # Tamaño de la proyeccion
@@ -14,12 +18,20 @@ EPOCH = 10
 # Tamaño de cada grupo entrenamiento
 BATCH = 4
 
+
+
 def readData(name):
-    """ Lectura de archivo con condificacion utf_8
+    """ Lectura de archivo csv en directorio DIR 
+        Devuelve matriz con los datos y cabecera
     """
-    with open(name, encoding = 'utf_8') as f:
-        data = f.read()
-    return data
+    data = []
+    with open(DIR + name, 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            data.append(row)
+    m = np.matrix(data[1:])
+    m.shape = ((len(data)-1)//SHAPE,SHAPE)
+    return m, data[0] 
 
 
 def preprocessing(data):
@@ -51,7 +63,9 @@ def writeGraph(sess):
 
 
 
-data = readData(TEXT)
+data = readData(FILE)
+data_small = data[0:20,]
+print(data_small)
 tokens, coding = preprocessing(data)
 x_vec, l_vec = extract_tuples(tokens)
 
