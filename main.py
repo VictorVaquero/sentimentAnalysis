@@ -5,14 +5,14 @@ import numpy as np
 import tensorflow as tf
 
 # Archivo de texto con los datos a procesar
-TEXT = "pruebas.txt"
+TEXT = "market.txt"
 DIR = "./database/"
 FILE = "tweets_apple.csv"
 SHAPE = 10 # Diez columnas, n filas
 # Tamaño de vocabulario
-V = 100
+V = 200
 # Tamaño de la proyeccion
-D = 10
+D = 32
 # Numero de pasadas a la base de datos
 EPOCH = 10
 # Tamaño de cada grupo entrenamiento
@@ -20,12 +20,12 @@ BATCH = 4
 
 
 
-def readData(name):
-    """ Lectura de archivo csv en directorio DIR 
+def readCSV(name):
+    """ Lectura de archivo csv name 
         Devuelve matriz con los datos y cabecera
     """
     data = []
-    with open(DIR + name, 'r') as f:
+    with open(name, 'r') as f:
         reader = csv.reader(f)
         for row in reader:
             data.append(row)
@@ -33,6 +33,12 @@ def readData(name):
     m.shape = ((len(data)-1)//SHAPE,SHAPE)
     return m, data[0] 
 
+def readData(name):
+    """ Lectura de archivo txt
+    """
+    with open(name, 'r') as f:
+        data = list(f)
+    return " ".join(data)
 
 def preprocessing(data):
     """ Limpia y prepara los datos para su posterior
@@ -63,10 +69,13 @@ def writeGraph(sess):
 
 
 
-data = readData(FILE)
-data_small = data[0:20,]
+#data = readCSV(DIR+FILE)
+data = readData(TEXT)
+data_small = data[0:20]
+print(TEXT+ "  len: {}".format(len(data)))
 print(data_small)
 tokens, coding = preprocessing(data)
+print("N tokens: {}".format(len(tokens)))
 x_vec, l_vec = extract_tuples(tokens)
 
 
@@ -84,17 +93,26 @@ with tf.name_scope("Proyection_layer"):
     w1 = tf.get_variable("word_embeddings", shape = [V,D], dtype = tf.float32, initializer = tf.random_normal_initializer())
     b1 = tf.get_variable("biases_1", shape = [D], dtype = tf.float32, initializer = tf.zeros_initializer())
     proyection = tf.matmul(inp_one_hot,w1) + b1 # Proyecion lineal 
+    tf.summary.histogram("weights",w1)
+    tf.summary.histogram("biases",b1)
 with tf.name_scope("Output_layer"):
     w2 = tf.get_variable("weitghts_2", shape = [D,V], dtype = tf.float32, initializer = tf.random_normal_initializer())
     b2 = tf.get_variable("biases_2", shape = [V], dtype = tf.float32,  initializer = tf.zeros_initializer())
     output = tf.nn.softmax( tf.matmul(proyection,w2) + b2) # Pasar a probabilidades
+    tf.summary.histogram("weights",w2)
+    tf.summary.histogram("biases",b2)
 
 with tf.name_scope("Loss"):
-    loss = tf.reduce_sum(tf.losses.log_loss(label_one_hot, output))
-tf.summary.scalar("loss", loss)
+    loss = tf.reduce_sum(tf.losses.softmax_cross_entropy(label_one_hot, output))
+    tf.summary.scalar("loss", loss)
+with tf.name_scope("Accuracy"):
+    correct = tf.equal(tf.argmax(output,0),tf.argmax(label_one_hot,0))
+    accuracy = tf.reduce_mean(tf.cast(correct,tf.float32))
+    tf.summary.scalar("accuracy",accuracy)
 with tf.name_scope("Train"):
-    optimizer = tf.train.GradientDescentOptimizer(0.02)
+    optimizer = tf.train.GradientDescentOptimizer(1.01)
     train = optimizer.minimize(loss)
+
 
 # Inicializa los valores de las capas
 init = tf.global_variables_initializer()
@@ -109,15 +127,18 @@ merged = tf.summary.merge_all()
 
 # Entrenamiento del grafo
 ratio = len(x_vec)//BATCH
-for i in range(EPOCH):
+print("Batch: {}, N epoch: {}".format(BATCH, ratio))
+for i in range(ratio):
     # Pasar a representacion dispersa
-    x = x_vec[i*ratio:(i+1)*ratio]
-    l = l_vec[i*ratio:(i+1)*ratio]
+    x = x_vec[i*BATCH:(i+1)*BATCH]
+    l = l_vec[i*BATCH:(i+1)*BATCH]
 
     feed_dict = {inp : x , label: l}
-    summary,_, loss_value = sess.run([merged,train,loss], feed_dict = feed_dict)
+    if i % 500 == 0:
+        accur,lo = sess.run([accuracy,loss],feed_dict = feed_dict)
+        print("Accuracy: {}, loss: {}".format(accur,lo))
+    summary,_ = sess.run([merged,train], feed_dict = feed_dict)
     wr.add_summary(summary,i)
-    print(loss_value)
 
 wr.close()
 
