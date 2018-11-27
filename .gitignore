@@ -1,5 +1,7 @@
-Datos.txt
+database/heapdump/
 eventos/
+store/
+Datos.txt
 JavaPreprocesamiento/market*.txt
 JavaPreprocesamiento/listaPalabrasClave*.txt
 embedings.ckpt
