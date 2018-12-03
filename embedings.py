@@ -16,6 +16,7 @@ BUSINESS = ["apple","google","ibm","microsoft","nvidia"]
 END_FILE = ".txt" # Supongo que si acaba en .txt es el archivo con tweets limpios
 # Archivo de texto con los datos a procesar
 FILE = "apple/tweets_2018-10-01_limpios.txt"
+FILE_SUFIX = "_limpios.txt"
 KEY_WORDS = "listaPalabrasClave2.txt"
 SAVE_FILE = "embedings"
 
@@ -23,15 +24,17 @@ SHAPE = 10 # Diez columnas, n filas
 
 
 # Tamaño de vocabulario
-V = 1000
+V = 2000
 # Tamaño de la proyeccion
-D = 64
+D = 128
 # Numero de pasadas a la base de datos
 EPOCH = 100
 # Tamaño de cada grupo entrenamiento
-BATCH_SIZE = 1
+BATCH_SIZE = 4
 # Parametro de aprendizaje por backtracking
-LEARNING_RATE = 0.05
+LEARNING_RATE = 0.001
+# Parametro proporcion datos para entrenamiento / datos para test
+VALIDATE_RATIO = 0.8
 
 def readCSV(name):
     """ Lectura de archivo csv name
@@ -94,15 +97,19 @@ def variableSummaries(var):
 
 
 def cleanFiles():
-    path = DIR+ b + "/"
-    files = [f for b in BUSINESS for f in listdir(path) if isfile(join(path,f))]
+    files = [b+"/"+f for b in BUSINESS for f in listdir(DIR+b+ "/") if isfile(DIR+b+ "/" + f) and f[-len(FILE_SUFIX):]== FILE_SUFIX]
     return files
 
 
 # -------------------------------- Programa principal ------------------------------
 
 
-data = readData(DIR+FILE)
+files = cleanFiles()
+print("Archivos limpios: {}".format(files))
+data = [ readData( DIR+x) for x in files]
+data = " ".join(data)
+
+
 #data = readCSV(DIR+FILE)
 #data = readData(TEXT)
 print(FILE+ "  Len: {} palabras".format(len(data)))
@@ -153,7 +160,7 @@ with tf.name_scope("Accuracy"): # Calculo de cuantas palabras a acertado
     accuracy = tf.reduce_mean(correct)
     tf.summary.scalar("accuracy",accuracy)
 with tf.name_scope("Train"): # Entrenar la red con descenso de gradiente
-    optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE)
+    optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
     train = optimizer.minimize(loss)
 
 # La session guarda el estado actual de los tensores
@@ -175,6 +182,16 @@ saver = tf.train.Saver({"embedding" : w1, "emb_bias": b1})
 init = tf.global_variables_initializer()
 sess.run(init) # Inicializa sesion
 
+# Reserva datos para comprovar calidad de la red
+rand = random.random()
+random.Random(rand).shuffle(x_vec)
+random.Random(rand).shuffle(l_vec)
+x_vec_test = x_vec[int(len(x_vec)*VALIDATE_RATIO):]
+l_vec_test = l_vec[int(len(l_vec)*VALIDATE_RATIO):]
+x_vec = x_vec[:int(len(x_vec)*VALIDATE_RATIO)]
+l_vec = l_vec[:int(len(l_vec)*VALIDATE_RATIO)]
+
+
 # Entrenamiento del grafo
 try:
     for e in range(EPOCH):
@@ -191,7 +208,7 @@ try:
 
             feed_dict = {inp : x , label: l}
             if i % 1000 == 0: # Solo cada x veces paso la red a ver como va
-                summary, accur,lo = sess.run([merged, accuracy,loss],feed_dict = {inp : x_vec, label : l_vec})
+                summary, accur,lo = sess.run([merged, accuracy,loss],feed_dict = {inp : x_vec_test, label : l_vec_test})
                 wr_test.add_summary(summary,i)
                 print("Pasada {} Paso {} --> Accuracy: {}, loss: {}".format(e,i,accur,lo))
             if i %100 == 99: # Cada x veces, captura informacion de tiempo de ejecucion

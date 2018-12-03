@@ -13,7 +13,7 @@ PREPROCES_DIR = "./JavaPreprocesamiento/"
 SAVE_DIR = "./store/"
 DIR = "./database/"
 
-SENT_FILE = "training.1000000.processed.noemoticon_limpios.txt"
+SENT_FILE = "training.1600000.processed.noemoticon_random_limpios.txt"
 KEY_WORDS = "listaPalabrasClave2.txt"
 SAVE_FILE = "embedings"
 
@@ -179,7 +179,7 @@ with tf.name_scope("Accuracy"): # Calculo de cuantas palabras a acertado
     accuracy = tf.reduce_mean(correct)
     tf.summary.scalar("accuracy",accuracy)
 with tf.name_scope("Train"): # Entrenar la red con descenso de gradiente
-    optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE)
+    optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
     train = optimizer.minimize(loss)
 
 # La session guarda el estado actual de los tensores
@@ -203,6 +203,18 @@ saver = tf.train.Saver({"embedding" : w1, "emb_bias": b1})
 # Inicializa los pesos pre entrenados
 saver.restore(sess, SAVE_DIR + SAVE_FILE)
 
+# Reserva datos para comprovar calidad de la red
+rand = random.random()
+random.Random(rand).shuffle(x_vec)
+random.Random(rand).shuffle(x_vec_lengths)
+random.Random(rand).shuffle(l_vec)
+x_vec_test = x_vec[int(len(x_vec)*VALIDATE_RATIO):]
+x_vec_lengths_test = x_vec_lengths[int(len(x_vec_lengths)*VALIDATE_RATIO):]
+l_vec_test = l_vec[int(len(l_vec)*VALIDATE_RATIO):]
+x_vec = x_vec[:int(len(x_vec)*VALIDATE_RATIO)]
+x_vec_lengths = x_vec_lengths[:int(len(x_vec_lengths)*VALIDATE_RATIO)]
+l_vec = l_vec[:int(len(l_vec)*VALIDATE_RATIO)]
+
 # Entrenamiento del grafo
 try:
     ratio = x_vec.shape[0]//BATCH_SIZE
@@ -222,9 +234,9 @@ try:
             feed_dict = {inp : x , inp_lengths: le, label: l}
             if i % 1000 == 0: # Solo cada x veces paso la red a ver como va
                 summary, accur,lo = sess.run([merged, accuracy,loss], feed_dict = 
-                    {inp: x_vec,
-                    inp_lengths: x_vec_lengths,
-                    label: l_vec})
+                    {inp: x_vec_test,
+                    inp_lengths: x_vec_lengths_test,
+                    label: l_vec_test})
                 wr_test.add_summary(summary,i)
                 print("Pasada {} Paso {} --> Accuracy: {}, loss: {}".format(e,i,accur,lo))
             if i %100 == 99: # Cada x veces, captura informacion de tiempo de ejecucion
