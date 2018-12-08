@@ -8,28 +8,24 @@ Use git clone to get the source. Everything but the preprocessing step, which ha
 
 ### Prerequisites
 
-The data recolection uses third-party library, GetOldTweets-python. You may need to install it to use the database recolection script.
+The data recolection uses multiple third-party librarys: GetOldTweets-python, TensorFlow and Stanford NLP. You may need to install it.
 
 
 ## Built With
 
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
+* [GetOldTweets](https://github.com/Jefferson-Henrique/GetOldTweets-python) - Twitter Parser
+* [Stanfor NLP](https://nlp.stanford.edu/) - Sintax Parser 
+* [TensorFlow](https://www.tensorflow.org/) - Neural Networks
 
 
 ## Authors
 
 * **Victor Vaquero Martinez** - *Main work* - [Victor](https://github.com/VictorVaqueroMartinez)
-* **Juan Rodrigez** - *Main work* - [Juan](https://github.com/VictorVaqueroMartinez)
+* **Juan Rodríguez** - *Main work* - [Juan](https://github.com/VictorVaqueroMartinez)
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details
 
-## Acknowledgments
 
-* GetOldTweets
-* Inspiration
-* etc
 

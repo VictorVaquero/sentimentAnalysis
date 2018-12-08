@@ -13,6 +13,8 @@ PREPROCES_DIR = "./JavaPreprocesamiento/"
 SAVE_DIR = "./store/"
 DIR = "./database/"
 BUSINESS = ["apple","google","ibm","microsoft","nvidia"]
+OTHER_FILES = ["training.1600000.processed.noemoticon_random_limpios.txt"]
+OTHER_SHAPE = 2 # Diez columnas, n filas
 END_FILE = ".txt" # Supongo que si acaba en .txt es el archivo con tweets limpios
 # Archivo de texto con los datos a procesar
 FILE = "apple/tweets_2018-10-01_limpios.txt"
@@ -20,23 +22,29 @@ FILE_SUFIX = "_limpios.txt"
 KEY_WORDS = "listaPalabrasClave2.txt"
 SAVE_FILE = "embedings"
 
-SHAPE = 10 # Diez columnas, n filas
 
 
 # Tamaño de vocabulario
-V = 2000
+V = 1000
 # Tamaño de la proyeccion
-D = 128
+D = 64
+# Parametro para la perdida NCE
+NUM_SAMPLED = 10
+# Numero de objetivos por pase NCE
+NUM_TARGET = 1
+# Contex windown
+CONTEXT_WINDOW = 2
 # Numero de pasadas a la base de datos
 EPOCH = 100
 # Tamaño de cada grupo entrenamiento
-BATCH_SIZE = 4
+BATCH_SIZE = CONTEXT_WINDOW*2
 # Parametro de aprendizaje por backtracking
 LEARNING_RATE = 0.001
 # Parametro proporcion datos para entrenamiento / datos para test
 VALIDATE_RATIO = 0.8
 
-def readCSV(name):
+
+def readCSV(name,shape):
     """ Lectura de archivo csv name
         Devuelve matriz con los datos y cabecera
     """
@@ -44,29 +52,26 @@ def readCSV(name):
     with open(name, 'r') as f:
         reader = csv.reader(f)
         for row in reader:
-            data.append(row)
-    m = np.matrix(data[1:])
-    m.shape = ((len(data)-1)//SHAPE,SHAPE)
-    return m, data[0] 
+            data.append(row[shape])
+    return data 
 
 def readData(name):
     """ Lectura de archivo txt
     """
     with open(name, 'r') as f:
         data = list(f)
-    return " ".join(data)
+    return data 
 
 def preprocessing(data,key_words):
     """ Prepara los datos para su posterior
     uso en el algoritmo, devuelve el texto con 
     cada palabra su respectiva id y un diccionario de palabra:id
     """
-
     key = key_words.split(" ")
-    sp = data.split(" ") # Tokeniza el texto
+    sp = [r.split(" ") for d in data for r in d ] # Tokeniza el texto
     count = key[0:V] # Solo queremos V diferentes palabras
     di = { a : count.index(a) for a in count } # Diccionario con la codificacion
-    return [ di[x] for x in sp if x in di], di 
+    return [[ di[x] for x in r if x in di] for r in sp], di 
 
 def extractTuples(data):
     """ Saca las tuplas (palabra,prediccion),
@@ -74,11 +79,13 @@ def extractTuples(data):
     salidas """
     inp = []
     out = []
-    for i in range(1,len(data)-1):
-        inp.append(data[i])
-        inp.append(data[i])
-        out.append(data[i-1])
-        out.append(data[i+1])
+    for r in data:
+        for i in range(len(r)):
+            for j in range(-CONTEXT_WINDOW,CONTEXT_WINDOW+1):
+                if j == CONTEXT_WINDOW or i+j <0 or i+j >= len(r):
+                    continue
+                inp.append(r[i])
+                out.append(r[i+j])
     return inp,out
 
 def variableSummaries(var):
@@ -100,24 +107,10 @@ def cleanFiles():
     files = [b+"/"+f for b in BUSINESS for f in listdir(DIR+b+ "/") if isfile(DIR+b+ "/" + f) and f[-len(FILE_SUFIX):]== FILE_SUFIX]
     return files
 
+def generateBatch(data):
+   return None
 
-# -------------------------------- Programa principal ------------------------------
-
-
-files = cleanFiles()
-print("Archivos limpios: {}".format(files))
-data = [ readData( DIR+x) for x in files]
-data = " ".join(data)
-
-
-#data = readCSV(DIR+FILE)
-#data = readData(TEXT)
-print(FILE+ "  Len: {} palabras".format(len(data)))
-key_words = readData(PREPROCES_DIR + KEY_WORDS)
-tokens, coding = preprocessing(data, key_words)
-print("Vocabulario: {}, N tokens validos: {}".format(V,len(tokens)))
-x_vec, l_vec = extractTuples(tokens)
-
+# ----------------------------grafo --------------------------
 
 # Vectores de entradas y etiquetas
 # y pasar a representacion dispersa
@@ -125,8 +118,8 @@ with tf.name_scope("Entry"):
     inp = tf.placeholder(tf.int32, shape = (None), name = "Input")
     inp_one_hot = tf.one_hot(inp, depth = V, name = "One_hot_input")
 with tf.name_scope("Labels"):
-    label = tf.placeholder(tf.int32, shape = (None), name = "Words")
-    # label_one_hot = tf.one_hot(label, depth = V, name = "One_hot_words", dtype = tf.int32) # Etiquetas, stop_gradient evita la propagacion del gradiente
+    label = tf.placeholder(tf.int32, shape = [NUM_TARGET,None], name = "Words")
+    label_one_hot = tf.one_hot(label, depth = V, name = "One_hot_words", dtype = tf.int32) # Etiquetas, stop_gradient evita la propagacion del gradiente
 
 # Crear las capas de nuestra arquitectura
 with tf.name_scope("Proyection_layer"):
@@ -153,7 +146,8 @@ with tf.name_scope("Output_layer"):
 # Usamos una softmax para escalar la salida y crear probabilidades,
 # ademas usa cross entropy como funcion de perdida
 with tf.name_scope("Loss"):
-    loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = label, logits = output, name = "softmax"))
+    loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(label,[-1]), logits = output, name = "softmax"))
+    #loss = tf.reduce_mean(tf.nn.nce_loss(weights = tf.transpose(w2), biases = b2, labels = tf.transpose(label), inputs = proyection, num_sampled = NUM_SAMPLED, num_classes = V, num_true = NUM_TARGET, partition_strategy = "div", name = "softmax"))
     tf.summary.scalar("loss", loss)
 with tf.name_scope("Accuracy"): # Calculo de cuantas palabras a acertado
     correct = tf.cast(tf.equal(tf.argmax(tf.nn.softmax(output),1, output_type = tf.int32),label), tf.float32)
@@ -175,6 +169,21 @@ wr_train = tf.summary.FileWriter(EVENTS_DIR + "train/" + desc + now.isoformat())
 wr_test = tf.summary.FileWriter(EVENTS_DIR + "test/" + desc + now.isoformat())
 wr_train.add_graph(sess.graph) # Añado el grafo
 
+# -------------------------------- Programa principal ------------------------------
+
+
+files = cleanFiles()
+print("Archivos limpios: {}".format(files))
+print("Otros archivos: {}".format(OTHER_FILES))
+data = [readCSV(DIR+x,0) for x in files]
+data.extend([readCSV(DIR+x,OTHER_SHAPE) for x in OTHER_FILES])
+#data = " ".join(data)
+
+key_words = " ".join(readData(PREPROCES_DIR + KEY_WORDS))
+tokens, coding = preprocessing(data, key_words)
+print("\nVocabulario: {}, N tokens validos: {}".format(V,len(tokens)))
+x_vec, l_vec = extractTuples(tokens)
+
 # Crear variable para guardar la matriz de proyeccion
 saver = tf.train.Saver({"embedding" : w1, "emb_bias": b1})
 
@@ -182,14 +191,28 @@ saver = tf.train.Saver({"embedding" : w1, "emb_bias": b1})
 init = tf.global_variables_initializer()
 sess.run(init) # Inicializa sesion
 
-# Reserva datos para comprovar calidad de la red
+print("\nEjemplo 1: token {}".format(tokens[0]))
+for i in range(6):
+    print("{} --> label: {}".format(x_vec[i],l_vec[i]))
+print("\n")
+
+# Desordenar vectores
 rand = random.random()
 random.Random(rand).shuffle(x_vec)
 random.Random(rand).shuffle(l_vec)
+
+len_l = len(l_vec)
+l_vec = np.array(l_vec)
+l_vec.shape = (NUM_TARGET,-1)
+
+# Reserva datos para comprovar calidad de la red
+# Separar tokens para entrenamiento y tokens para testear nuestra red
 x_vec_test = x_vec[int(len(x_vec)*VALIDATE_RATIO):]
-l_vec_test = l_vec[int(len(l_vec)*VALIDATE_RATIO):]
+l_vec_test = l_vec[:,int(len_l*VALIDATE_RATIO):]
 x_vec = x_vec[:int(len(x_vec)*VALIDATE_RATIO)]
-l_vec = l_vec[:int(len(l_vec)*VALIDATE_RATIO)]
+l_vec = l_vec[:,:int(len_l*VALIDATE_RATIO)]
+print("Label.shape: {}, Input.shape: {}".format(l_vec.shape, len(x_vec)))
+print("Test label.shape: {},test Input.shape: {}".format(l_vec_test.shape, len(x_vec_test)))
 
 
 # Entrenamiento del grafo
@@ -204,7 +227,7 @@ try:
         for i in range(ratio):
             # Selectionar parte para entrenar
             x = x_vec[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
-            l = l_vec[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
+            l = l_vec[:,i*BATCH_SIZE:(i+1)*BATCH_SIZE]
 
             feed_dict = {inp : x , label: l}
             if i % 1000 == 0: # Solo cada x veces paso la red a ver como va

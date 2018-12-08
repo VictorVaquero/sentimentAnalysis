@@ -17,7 +17,7 @@ SENT_FILE = "training.1600000.processed.noemoticon_random_limpios.txt"
 KEY_WORDS = "listaPalabrasClave2.txt"
 SAVE_FILE = "embedings"
 
-SHAPE_SENT = [0,1] # primera columna etiquetas, segunda columna tweet
+SHAPE_SENT = [1,2] # primera columna etiquetas, segunda columna tweet
 
 
 # Tamaño de vocabulario
@@ -27,7 +27,7 @@ D = 64
 # Numero de pasadas a la base de datos
 EPOCH = 100
 # Tamaño de cada grupo entrenamiento
-BATCH_SIZE = 1
+BATCH_SIZE = 2
 # Parametro de aprendizaje por backtracking
 LEARNING_RATE = 0.05
 # Parametro de numero de unidades en la celula lstm
@@ -38,7 +38,9 @@ SENT_DATASET = 2
 # se escoje el siguiente de manera aleatoria
 SHUFFLE_SIZE = 100
 # Numero de sentimientos diferentes
-SENT_NUMBER = 3
+SENT_NUMBER = 2
+# Ratio de datos 
+VALIDATE_RATIO = 0.8
 
 def readData(name):
     """ Lectura de archivo txt
@@ -62,15 +64,14 @@ def preprocessingSent(data,key_words):
     out = [] 
     label = []
     for line in data: 
-        cols = line.split(",")
-        twe = cols[SHAPE_SENT[1]]
-        lab = cols[SHAPE_SENT[0]]
+        twe = line[SHAPE_SENT[1]]
+        lab = int(line[SHAPE_SENT[0]])
         sp = twe.split(" ") # Tokeniza el texto
         valid = [ di[x] for x in sp if x in di]
         if(len(valid)>0):
             valid_size += len(valid)
             out.append(valid)
-            label.append(lab)
+            label.append(lab if lab == 0 else 1) # Remapeando sentimiento etiqueta 4 --> 1
     return out,label, di, valid_size 
 
 def padded(data):
@@ -105,8 +106,10 @@ def variableSummaries(var):
 
 data = []
 with open(DIR + SENT_FILE, 'r') as f:
-    for line in f:
+    reader = csv.reader(f,delimiter = ',')
+    for line in reader:
         data.append(line)
+print(data[0])
 
 key_words = readData(PREPROCES_DIR + KEY_WORDS)
 x_vec,l_vec, coding, valid_size = preprocessingSent(data, key_words)
@@ -175,6 +178,7 @@ with tf.name_scope("Loss"):
     loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = label, logits = output, name = "softmax"))
     tf.summary.scalar("loss", loss)
 with tf.name_scope("Accuracy"): # Calculo de cuantas palabras a acertado
+    ou = tf.nn.softmax(output)
     correct = tf.cast(tf.equal(tf.argmax(tf.nn.softmax(output),1, output_type = tf.int32),label), tf.float32)
     accuracy = tf.reduce_mean(correct)
     tf.summary.scalar("accuracy",accuracy)
@@ -233,10 +237,12 @@ try:
 
             feed_dict = {inp : x , inp_lengths: le, label: l}
             if i % 1000 == 0: # Solo cada x veces paso la red a ver como va
-                summary, accur,lo = sess.run([merged, accuracy,loss], feed_dict = 
+                summary, accur,lo, prelabel = sess.run([merged, accuracy,loss,ou], feed_dict = 
                     {inp: x_vec_test,
                     inp_lengths: x_vec_lengths_test,
                     label: l_vec_test})
+                for i in range(10):
+                    print("label: {} --> pre: {}".format(l_vec_test[i],prelabel[i]))
                 wr_test.add_summary(summary,i)
                 print("Pasada {} Paso {} --> Accuracy: {}, loss: {}".format(e,i,accur,lo))
             if i %100 == 99: # Cada x veces, captura informacion de tiempo de ejecucion
