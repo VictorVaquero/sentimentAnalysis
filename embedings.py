@@ -8,19 +8,25 @@ import datetime
 import numpy as np
 import tensorflow as tf
 
+STORE = False # Store or not final products
+
 EVENTS_DIR = "./eventos/"
 PREPROCES_DIR = "./JavaPreprocesamiento/"
 SAVE_DIR = "./store/"
 DIR = "./database/"
 BUSINESS = ["apple","google","ibm","microsoft","nvidia"]
 OTHER_FILES = ["training.1600000.processed.noemoticon_random_limpios.txt"]
-OTHER_SHAPE = 2 # Diez columnas, n filas
+TWEET_SHAPE = 1
+OTHER_SHAPE = 2 
 END_FILE = ".txt" # Supongo que si acaba en .txt es el archivo con tweets limpios
 # Archivo de texto con los datos a procesar
 FILE = "apple/tweets_2018-10-01_limpios.txt"
 FILE_SUFIX = "_limpios.txt"
 KEY_WORDS = "listaPalabrasClave2.txt"
 SAVE_FILE = "embedings"
+FILE_WORDS = "words.tsv" # Para guardar la codificacion
+FILE_ENCODING = "encoding.tsv"
+
 
 
 
@@ -175,13 +181,14 @@ wr_train.add_graph(sess.graph) # Añado el grafo
 files = cleanFiles()
 print("Archivos limpios: {}".format(files))
 print("Otros archivos: {}".format(OTHER_FILES))
-data = [readCSV(DIR+x,0) for x in files]
+data = [readCSV(DIR+x,TWEET_SHAPE) for x in files]
 data.extend([readCSV(DIR+x,OTHER_SHAPE) for x in OTHER_FILES])
 #data = " ".join(data)
 
 key_words = " ".join(readData(PREPROCES_DIR + KEY_WORDS))
 tokens, coding = preprocessing(data, key_words)
 print("\nVocabulario: {}, N tokens validos: {}".format(V,len(tokens)))
+
 x_vec, l_vec = extractTuples(tokens)
 
 # Crear variable para guardar la matriz de proyeccion
@@ -248,18 +255,31 @@ except KeyboardInterrupt:
 
 wr_train.close()
 wr_test.close()
-# Guarda los valores en SAVE_FILE
-save_path = saver.save(sess, SAVE_DIR + SAVE_FILE)
-print("Modelo guardado en {}".format(save_path))
+
+if STORE:
+    # Guarda los valores en SAVE_FILE
+    save_path = saver.save(sess, SAVE_DIR + SAVE_FILE)
+    print("Modelo guardado en {}".format(save_path))
 
 
 
 
 
+    # Ahora guardar la codificacion
+    items = coding.items()
+    items = sorted(items, key= lambda x: x[1])
+    with open(SAVE_DIR + FILE_WORDS, "w") as f:
+        wr = csv.writer(f)
+        for w,i in items:
+            wr.writerow([w])
 
-
-
-
+    x_vec = list(range(V))
+    feed_dict = {inp : x_vec}
+    proyection = sess.run(proyection, feed_dict = feed_dict)
+    with open(SAVE_DIR + FILE_ENCODING, "w") as f:
+        wr = csv.writer(f, delimiter= "\t")
+        for p in proyection:
+            wr.writerow(p)
 
 
 
