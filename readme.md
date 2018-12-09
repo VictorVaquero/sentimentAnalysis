@@ -20,8 +20,8 @@ The data recolection uses multiple third-party librarys: GetOldTweets-python, Te
 
 ## Authors
 
-* **Victor Vaquero Martinez** - *Main work* - [Victor](https://github.com/VictorVaqueroMartinez)
-* **Juan Rodríguez** - *Main work* - [Juan](https://github.com/VictorVaqueroMartinez)
+* **Victor Vaquero Martinez** - *Main work* - [Victor](https://github.com/VictorVaquero/)
+* **Juan Rodríguez** - *Main work* - [Juan]()
 
 ## License
 
