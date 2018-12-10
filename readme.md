@@ -8,7 +8,7 @@ Use git clone to get the source. Everything but the preprocessing step, which ha
 
 ### Prerequisites
 
-The data recolection uses multiple third-party librarys: GetOldTweets-python, TensorFlow and Stanford NLP. You may need to install it.
+The data recolection uses multiple third-party librarys: GetOldTweets-python, TensorFlow and Stanford NLP. You may need to install them.
 
 
 ## Built With
