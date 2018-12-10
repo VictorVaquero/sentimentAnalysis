@@ -248,7 +248,7 @@ with tf.name_scope("Loss"):
     loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = label, logits = output, name = "softmax"))
     tf.summary.scalar("loss", loss)
 with tf.name_scope("Accuracy"): # Calculo de cuantas palabras a acertado
-    ou = tf.nn.softmax(output)
+    ou = tf.nn.softmax(output, name = "Output")
     correct = tf.cast(tf.equal(tf.argmax(ou,1, output_type = tf.int32),label), tf.float32)
     accuracy = tf.reduce_mean(correct)
     tf.summary.scalar("accuracy",accuracy)
