@@ -1,4 +1,5 @@
 database/heapdump/
+database/training*
 eventos*/
 Datos.txt
 JavaPreprocesamiento/market*.txt
