@@ -10,10 +10,10 @@ import tensorflow as tf
 
 STORE = False # Store or not final products
 
-EVENTS_DIR = "./eventos/"
-PREPROCES_DIR = "./JavaPreprocesamiento/"
-SAVE_DIR = "./store/"
-DIR = "./database/"
+EVENTS_DIR = "../eventos/"
+PREPROCES_DIR = "../JavaPreprocesamiento/"
+SAVE_DIR = "../store/"
+DIR = "../database/"
 BUSINESS = ["apple","google","ibm","microsoft","nvidia"]
 OTHER_FILES = ["training.1600000.processed.noemoticon_random_limpios.txt"]
 TWEET_SHAPE = 1

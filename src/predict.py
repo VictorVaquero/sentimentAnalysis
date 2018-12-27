@@ -8,9 +8,9 @@ import tensorflow as tf
 from tensorflow.python.saved_model import tag_constants
 
 BUSINESS = ["apple","google","ibm","microsoft","nvidia"]
-DIR = "./database/"
+DIR = "../database/"
 PREDICTIONS_DIR = DIR + "pred/"
-SAVE_DIR = "./store/"
+SAVE_DIR = "../store/"
 PRED_DIR = SAVE_DIR + "pred/"
 FILE_WORDS = "words.tsv"
 FILE_SUFIX = "_limpios.txt"

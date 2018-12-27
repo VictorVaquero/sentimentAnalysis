@@ -1,7 +1,7 @@
 import csv
 from collections import Counter
 
-DIR = "./JavaPreprocesamiento/"
+DIR = "../JavaPreprocesamiento/"
 TEXT = "market.csv"
 FINAL = "market.txt"
 IRREGULAR = "IrregularVerbs.csv"

@@ -15,26 +15,39 @@ import java.util.Hashtable;
 public class Estrategia {
 
 	public static void main(String[] args) {
-		String url = "ASensi.csv"; // El fichero con el resultado del analisis de los tweets
+		String url = "tweets_2018-01-01_limpios.txt"; // El fichero con el resultado del analisis de sensivilidad de los tweets
 		String urlHistorico = "GOOGL"; // El fichero con el historico de precios de esa empresa en formato csv pero la url sin formato porque se usara luego para dar nombre al nuevo fichero
 		String[] texto = new String[4];
+		float[] aux = new float[2];
 		float[] numero = new float[2]; // posicion 0 valores negativos de los tweets, 1 valores positivos
 		try {
 			BufferedReader b = new BufferedReader(new InputStreamReader(new FileInputStream("D:/Domadoro/Documents/General/Universidad/Tercero/ALGC/Proyecto/" + url), "utf-8"));
 	        String cadena;
-	        int contador = 0;
+	        String diaAnterior = "";
 	        while((cadena = b.readLine())!=null) {
-	        	if(!(contador==0)){
-        			texto = cadena.toLowerCase().split(",");
-    	        	try{
-    	        		for(int i = 0; i<numero.length; i++){
-    	        			numero[i] = numero[i] + Float.parseFloat(texto[i]);
-    	        		}
-    	        	}catch(Exception e){
-    	        		System.err.println("Problema a la hora de parsear el los numeros");
-    	        	}
-	        	}
-	        	contador++;
+    			texto = cadena.toLowerCase().split(",");
+    			if(!texto[0].split(" ")[0].equals(diaAnterior) && diaAnterior!=""){
+    				if(aux[0]>aux[1]){
+    					numero[0] = numero[0] + 1;
+    				}else{
+    					numero[1] = numero[1] + 1;
+    				}
+    				aux[0] = 0;
+    				aux[1] = 0;
+    			}
+    			
+    			try{
+					if(Float.parseFloat(texto[1])>Float.parseFloat(texto[2])){
+						aux[0] = aux[0] + 1; 
+					}else{
+						aux[1] = aux[1] + 1; 
+					}
+				}catch(Exception e){
+					System.err.println("Problema a la hora de parsear el los numeros");
+				}
+    			
+    			diaAnterior = texto[0].split(" ")[0];
+    			
 	        }
 	        b.close();
 		} catch (Exception e) {
@@ -42,9 +55,9 @@ public class Estrategia {
 	    }
 		
 		if(numero[0]>numero[1]){
-			// usar numero[0];
+			// usar numero[0] negativo;
 		}else{
-			// usar numero[1];
+			// usar numero[1] positivo;
 		}
 		
 		// Suavizado

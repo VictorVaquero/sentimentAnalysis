@@ -8,11 +8,11 @@ import datetime
 import numpy as np
 import tensorflow as tf
 
-EVENTS_SENT_DIR = "./eventos_sent/"
-PREPROCES_DIR = "./JavaPreprocesamiento/"
-SAVE_DIR = "./store/"
+EVENTS_SENT_DIR = "../eventos_sent/"
+PREPROCES_DIR = "../JavaPreprocesamiento/"
+SAVE_DIR = "../store/"
 PRED_DIR = SAVE_DIR + "pred/"
-DIR = "./database/"
+DIR = "../database/"
 
 BUSINESS = ["apple","google","ibm","microsoft","nvidia"]
 SENT_FILE = "training.1600000.processed.noemoticon_random_limpios.txt"

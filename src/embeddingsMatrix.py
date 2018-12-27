@@ -1,6 +1,6 @@
 V = 1000
 D = 64 # Tamaño de la proyeccion
-SAVE_DIR = "./store/"
+SAVE_DIR = "../store/"
 SAVE_FILE = "embedings"
 
 with tf.name_scope("Entry"):

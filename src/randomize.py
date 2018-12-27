@@ -2,7 +2,7 @@ import random
 import csv
 
 
-DIR = "./database/"
+DIR = "../database/"
 SENT_FILE = "training.1600000.processed.noemoticon.csv"
 OUT_FILE =  "training.1600000.processed.noemoticon_random.csv"
 
