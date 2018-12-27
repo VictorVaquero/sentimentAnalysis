@@ -54,11 +54,7 @@ public class Estrategia {
 	         System.out.println("Problema al leer el fichero");
 	    }
 		
-		if(numero[0]>numero[1]){
-			// usar numero[0] negativo;
-		}else{
-			// usar numero[1] positivo;
-		}
+		float sent = numero[0]/(numero[0]+numero[1]);
 		
 		// Suavizado
 		ArrayList<String[]> precios = new ArrayList<String[]>();
@@ -85,7 +81,7 @@ public class Estrategia {
 		fecha.set(Integer.parseInt(ultimaFecha[0]), Integer.parseInt(ultimaFecha[1])-1, Integer.parseInt(ultimaFecha[2]));
 		
 		
-		double[] prediccion = prediccion(precios); // guardar las prediccion para close
+		double[] prediccion = prediccion(precios,sent); // guardar las prediccion para close
 		
 		PrintWriter fichero;
 		FileWriter archivo;
@@ -116,7 +112,7 @@ public class Estrategia {
 		
 	}
 
-	public static double[] prediccion(ArrayList<String[]> precios) {
+	public static double[] prediccion(ArrayList<String[]> precios,float[] sent) {
 		int k = 1; // se puede quitar
 		int periodosFuturos = 50; // Numero de dias que tarda en repetirse el ciclo de cada periodo, tambien es numero de dias que predice en el futuro
 		double[] prediccion = new double[periodosFuturos]; // Donde se guarda la prediccion
@@ -125,6 +121,7 @@ public class Estrategia {
 		double alpha1 = 0.1;
 		double alpha2 = 0.2;
 		double alpha3 = 0.7;
+		double alpha4 = 0.6
 		
 		// Posicion 0 Periodo actual // Posicion 1 Periodo anterior
 		double[] nivel = new double[2];
@@ -132,11 +129,13 @@ public class Estrategia {
 		ArrayList<Double> St = new ArrayList<Double>(); // Estimado de estacionalidad 
 		double[] hisPre = new double[2]; // Historico de precios
 		double[] proFut = new double[2]; // Pronostico de P periodos futuros
+		double[] sentPre = new double[2]; // Estimacion sentimiento
 		
 		for(int i = 0; i<precios.size(); i++){
 			if(i == 0){ // primer periodo
 				hisPre[0] = Double.parseDouble(precios.get(i)[4]);
 				nivel[0] = hisPre[0];
+				sentPre[0] = sent[0];
 				tendencia[0] = 0;
 				for(int j = 0; j<periodosFuturos+1;j++){
 					St.add(1.0);
@@ -145,16 +144,18 @@ public class Estrategia {
 				hisPre[1] = hisPre[0];
 				hisPre[0] = Double.parseDouble(precios.get(i)[4]);
 				nivel[1] = nivel[0];
+				sentPre[1] = sentPre[0];
 				tendencia[1] = tendencia[0];
-				nivel[0] = alpha1*(hisPre[0]/St.get(0)) + (1 - alpha1)*(nivel[1] + tendencia[1]);
+				nivel[0] = alpha1*(hisPre[0]/St.get(0) - sent[i]) + (1 - alpha1)*(nivel[1] + tendencia[1] + sentPre[1]);
 				tendencia[0] = alpha2*(nivel[0] - nivel[1]) + (1 - alpha2)*tendencia[1];
+				sentPre[0] = alpha4*(hisPre[0]/St.get(0)-nivel[0]) + (1-alpha4)*sentPre[1];
 				proFut[0] =(nivel[1] + k*tendencia[1])*St.get(i-1);
-				St.add(alpha3*(hisPre[0]/nivel[0]) + (1-alpha3)*St.get(i-1));
+				St.add(alpha3*((hisPre[0]-sent[i])/nivel[0]) + (1-alpha3)*St.get(i-1));
 			}
 		}
 		
 		for(int j = 0; j<periodosFuturos;j++){
-			prediccion[j] = (nivel[1] + tendencia[1])*St.get(precios.size()+j);
+			prediccion[j] = (nivel[1] + tendencia[1])*St.get(precios.size()+j) + sent[1];
 		}
 		return prediccion;
 	}
